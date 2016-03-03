@@ -1,5 +1,5 @@
 package ices;
 
-public class Robot {
+public abstract class Robot {
 
 }
