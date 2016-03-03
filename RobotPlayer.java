@@ -1,6 +1,6 @@
 package ices;
 
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 public class RobotPlayer {
 
@@ -11,35 +11,40 @@ public class RobotPlayer {
 	@SuppressWarnings("unused")
 	public static void run(RobotController rc) {
 
-		Globals.init(theRC);
+		try {
 
-		switch (rc.getType()) {
-		case ARCHON:
-			BotArchon.loop();
-			break;
+			switch (rc.getType()) {
+			case ARCHON:
+				new Archon(rc).run();
+				break;
 
-		case GUARD:
-			BotGuard.loop();
-			break;
+			case GUARD:
+				new Guard(rc).run();
+				break;
 
-		case SCOUT:
-			BotScout.loop();
-			break;
+			case SCOUT:
+				new Scout(rc).run();
+				break;
 
-		case SOLDIER:
-			BotSoldier.loop();
-			break;
+			case SOLDIER:
+				new Soldier(rc).run();
+				break;
 
-		case TURRET:
-			BotTurret.loop();
-			break;
+			case TURRET:
+				new Turret(rc).run();
+				break;
 
-		case VIPER:
-			BotViper.loop();
-			break;
+			case VIPER:
+				new Viper(rc).run();
+				break;
+			default:
+				break;
+			}
 
-		default:
-			throw new Exception("weird robot type " + rc.getType());
+			while (true);
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }

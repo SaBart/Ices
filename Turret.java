@@ -2,9 +2,9 @@ package ices;
 
 import battlecode.common.*;
 
-public class Viper extends Robot {
+public class Turret extends Robot {
 
-	public Viper(RobotController rc) {
+	public Turret(RobotController rc) {
 		super(rc);
 	}
 
