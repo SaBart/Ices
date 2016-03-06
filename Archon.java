@@ -13,20 +13,23 @@ public class Archon extends Robot {
 	protected void build(RobotType rt) throws GameActionException {
 		if (!rc.isCoreReady())
 			return;
-
 		if (rc.getTeamParts() < rt.partCost)
 			return;
 
 		// Build robot in some random direction
+
+		int j = rand.nextInt(8);
+
 		for (int i = 0; i < 8; i++)
-			if (rc.canBuild(directions[i], rt))
-				rc.build(directions[i], rt);
+			if (rc.canBuild(directions[(j + i) % 8], rt))
+				rc.build(directions[(j + i) % 8], rt);
 	}
 
 	@Override
 	protected void act() throws GameActionException {
 		processSignals();
-		sense();
+		senseZombies();
+		senseEnemies();
 		double fate = 1;
 
 		if (zombies.length != 0 || enemies.length != 0)
