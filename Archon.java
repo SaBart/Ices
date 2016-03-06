@@ -45,6 +45,7 @@ public class Archon extends Robot {
 
 	protected void inform() throws GameActionException {
 		// TODO: tell the new scout about known bases (or at least one)
+		// teeeest
 	}
 
 }
