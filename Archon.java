@@ -17,7 +17,7 @@ public class Archon extends Robot {
 		if (rc.getTeamParts() < rt.partCost)
 			return;
 
-		// --Build robot in some random direction
+		// Build robot in some random direction
 		for (int i = 0; i < 8; i++)
 			if (rc.canBuild(directions[i], rt))
 				rc.build(directions[i], rt);
@@ -25,9 +25,23 @@ public class Archon extends Robot {
 
 	@Override
 	protected void act() throws GameActionException {
+		processSignals();
 		sense();
-		bail();
-		//build(RobotType.SCOUT);
+		double fate = 1;
+
+		if (zombies.length != 0 || enemies.length != 0)
+			fate = rand.nextDouble();
+
+		/* TODO: maybe change the p of moving */
+		if (fate > 0.8) {
+			build(RobotType.SCOUT);
+			giveInfoToNewRobot();
+		} else
+			bail();
+	}
+
+	protected void giveInfoToNewRobot() throws GameActionException {
+		// TODO: tell the new scout about known bases (or at least one)
 	}
 
 }
