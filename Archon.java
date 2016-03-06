@@ -35,12 +35,12 @@ public class Archon extends Robot {
 		/* TODO: maybe change the p of moving */
 		if (fate > 0.8) {
 			build(RobotType.SCOUT);
-			giveInfoToNewRobot();
+			inform();
 		} else
 			bail();
 	}
 
-	protected void giveInfoToNewRobot() throws GameActionException {
+	protected void inform() throws GameActionException {
 		// TODO: tell the new scout about known bases (or at least one)
 	}
 
