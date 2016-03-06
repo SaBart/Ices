@@ -14,6 +14,7 @@ public class Scout extends Robot {
 	protected Direction direction;
 	protected MapLocation destination;
 	protected boolean suicideMode;
+	protected int infection;
 
 	public Scout(RobotController rc) {
 		super(rc);
@@ -33,7 +34,13 @@ public class Scout extends Robot {
 		// able
 		// to send message in previous turn
 
-		if (destination != null && zombiesNear())
+		if (rc.isInfected())
+			infection++;
+
+		if (infection > 9 && suicideMode)
+			rc.disintegrate();
+
+		if (destination != null && rc.isInfected())
 			suicideMode = true;
 
 		processSignals();
