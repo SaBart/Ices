@@ -17,6 +17,8 @@ public abstract class Robot {
 
 	protected RobotInfo[] zombies;
 	protected RobotInfo[] enemies;
+	protected ArrayList<Target> targets;
+	protected ArrayList<MapLocation> zombieDens;
 
 	MapLocation[] initArchons;
 
@@ -32,6 +34,8 @@ public abstract class Robot {
 		this.rc = rc;
 		rand = new Random(rc.getID());
 		senseRadius = rc.getType().sensorRadiusSquared;
+		targets = new ArrayList<>();
+		zombieDens = new ArrayList<>();
 	}
 
 	public void run() {
@@ -49,6 +53,34 @@ public abstract class Robot {
 
 	protected abstract void act() throws GameActionException;
 
+	protected void processSignals() throws GameActionException {
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != rc.getTeam())
+				continue;
+			int[] data = sig.getMessage();
+			int x = data[0] / 10000;
+			int y = data[0] % 10000;
+			int id = data[1];
+			MapLocation l = new MapLocation(x, y);
+
+			if (id > 0) {
+				for (Target t : targets)
+					if (t.who == id) {
+						t.where = l;
+						return;
+					}
+				targets.add(new Target(id, l));
+			} else {
+				for (MapLocation z : zombieDens)
+					if (z.x == l.x && z.y == l.y)
+						return;
+				zombieDens.add(l);
+			}
+		}
+		rc.setIndicatorString(0, Integer.toString(targets.size()) + "+" + Integer.toString(zombieDens.size()));
+	}
+
 	protected void senseEnemies() throws GameActionException {
 		enemies = rc.senseNearbyRobots(senseRadius, rc.getTeam().opponent());
 	}
@@ -63,19 +95,6 @@ public abstract class Robot {
 
 	protected boolean zombiesNear() {
 		return zombies != null && zombies.length > 0;
-	}
-
-	protected void processSignals() throws GameActionException {
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != rc.getTeam())
-				continue;
-			int[] data = sig.getMessage();
-			int y = data[0] % 10000;
-			int x = (data[0] - y) / 10000;
-			// System.out.println("received x: " + x + " y: " + y);
-			knownBase(Math.abs(data[1]), x, y);
-		}
 	}
 
 	protected boolean knownBase(int ID, int x, int y) throws GameActionException {
@@ -175,8 +194,11 @@ public abstract class Robot {
 	}
 
 	protected void bail() throws GameActionException {
-		if (!rc.isCoreReady())
+		if (!rc.isCoreReady()) {
+			senseZombies();
+			senseEnemies();
 			return;
+		}
 
 		int closest = senseRadius;
 		Direction d = directions[rand.nextInt(8)];

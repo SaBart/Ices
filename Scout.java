@@ -8,67 +8,57 @@ public class Scout extends Robot {
 
 	protected Direction direction;
 	protected MapLocation destination;
-	protected ArrayList<Target> targets;
-	protected ArrayList<MapLocation> zombieDens;
-	protected int infection;
 
 	public Scout(RobotController rc) {
 		super(rc);
 		direction = rc.getLocation().directionTo(rc.getInitialArchonLocations(rc.getTeam().opponent())[rand
 				.nextInt(rc.getInitialArchonLocations(rc.getTeam().opponent()).length)]);
-
-		if (rand.nextDouble() < 0.8)
-			direction = directions[rand.nextInt(directions.length)];
-
-		targets = new ArrayList<>();
-		zombieDens = new ArrayList<>();
-
 	}
 
 	@Override
 	protected void act() throws GameActionException {
 
+		if (rc.getInfectedTurns() == 1)
+			rc.disintegrate();
+
+		if (destination == null && !targets.isEmpty() && rc.isInfected()) {
+			// closest enemy archon
+			destination = targets.get(0).where;
+			for (Target t : targets)
+				if (rc.getLocation().distanceSquaredTo(t.where) < rc.getLocation().distanceSquaredTo(destination))
+					destination = t.where;
+		}
+
+		if (destination == null && !rc.isInfected() && !zombieDens.isEmpty() && !targets.isEmpty()) {
+			// closest enemy archon
+			MapLocation archon = targets.get(0).where;
+			for (Target t : targets)
+				if (rc.getLocation().distanceSquaredTo(t.where) < rc.getLocation().distanceSquaredTo(archon))
+					archon = t.where;
+			// a den closest to the archon
+			destination = zombieDens.get(0);
+			for (MapLocation l : zombieDens)
+				if (archon.distanceSquaredTo(l) < archon.distanceSquaredTo(destination))
+					destination = l;
+		}
+		if (destination != null && rc.isInfected()) {
+			homeInOn();
+			return;
+		}
+		if (destination != null && !rc.isInfected()) {
+			getInfected();
+			return;
+		}
 		if (rc.getRoundNum() % 5 == 4)
 			processSignals();
-		if (targets.isEmpty() && zombieDens.isEmpty() && rc.getRoundNum() % 5 == 2) {
+		if (rc.getRoundNum() % 5 == 3) {
 			senseEnemies();
 			senseEnemyBase();
 			senseZombies();
 			senseZombieDen();
 		}
-		if (!targets.isEmpty() && rc.isInfected()) {
-			destination = targets.get(rand.nextInt(targets.size())).where;
-			homeInOn();
-		}
-		if (!rc.isInfected() && !zombieDens.isEmpty()) {
-			destination = zombieDens.get(rand.nextInt(zombieDens.size()));
-			getInfected();
-		}
+
 		explore();
-	}
-
-	@Override
-	protected void processSignals() throws GameActionException {
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != rc.getTeam())
-				continue;
-			int[] data = sig.getMessage();
-			int x = data[0] / 10000;
-			int y = data[0] % 10000;
-			int id = data[1];
-			MapLocation l = new MapLocation(x, y);
-
-			if (id > 0) {
-				for (Target t : targets)
-					if (t.who == id) {
-						t.where = l;
-						return;
-					}
-				targets.add(new Target(id, l));
-			}
-		}
-		rc.setIndicatorString(0, Integer.toString(targets.size()));
 	}
 
 	protected void explore() throws GameActionException {
@@ -82,11 +72,9 @@ public class Scout extends Robot {
 		}
 
 		if (rc.canMove(turnLeft))
-			direction = turnLeft;
+			rc.move(turnLeft);
 		else
-			direction = turnRight;
-
-		rc.move(direction);
+			rc.move(turnRight);
 
 		/*
 		 * sense what is around me once in a while, if its important, tell my
@@ -97,13 +85,14 @@ public class Scout extends Robot {
 	protected void homeInOn() throws GameActionException {
 		if (!rc.isCoreReady())
 			return;
+		if (!rc.isInfected()) {
+			destination = null;
+			return;
+		}
 
 		rc.setIndicatorString(0, "suicide run");
 
-		if (rc.getInfectedTurns() == 1)
-			rc.disintegrate();
-
-		if (rc.getLocation().distanceSquaredTo(destination) <= 8) {
+		if (rc.getLocation().distanceSquaredTo(destination) <= 20) {
 			senseEnemies();
 			senseEnemyBase();
 			if (rc.isInfected())
@@ -126,6 +115,10 @@ public class Scout extends Robot {
 	protected void getInfected() throws GameActionException {
 		if (!rc.isCoreReady())
 			return;
+		if (rc.isInfected()) {
+			destination = null;
+			return;
+		}
 
 		rc.setIndicatorString(0, "getting infected");
 
@@ -195,7 +188,10 @@ public class Scout extends Robot {
 		for (RobotInfo zombie : zombies)
 			if (zombie.type == RobotType.ZOMBIEDEN) {
 				rc.broadcastMessageSignal(zombie.location.x * 10000 + zombie.location.y, -zombie.ID, 1000);
-				destination = zombie.location;
+				for (MapLocation l : zombieDens)
+					if (l.x == zombie.location.x && l.y == zombie.location.y)
+						return;
+				zombieDens.add(zombie.location);
 			}
 	}
 

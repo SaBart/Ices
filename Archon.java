@@ -27,14 +27,20 @@ public class Archon extends Robot {
 
 	@Override
 	protected void act() throws GameActionException {
+		if (zombiesNear() || enemiesNear()) {
+			bail();
+			return;
+		}
+		if (rc.getRoundNum() % 10 == 9) {
+			for (Target t : targets)
+				rc.broadcastMessageSignal(t.where.x * 10000 + t.where.y, t.who, 1000);
+			for (MapLocation l : zombieDens)
+				rc.broadcastMessageSignal(l.x * 10000 + l.y, -1, 1000);
+		}
 		processSignals();
 		senseZombies();
 		senseEnemies();
 
-		if (zombiesNear() || enemiesNear())
-			bail();
-
-		/* TODO: maybe change the p of moving */
 		build(RobotType.SCOUT);
 
 	}
