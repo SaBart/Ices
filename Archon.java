@@ -30,17 +30,13 @@ public class Archon extends Robot {
 		processSignals();
 		senseZombies();
 		senseEnemies();
-		double fate = 1;
 
-		if (zombies.length != 0 || enemies.length != 0)
-			fate = rand.nextDouble();
+		if (zombiesNear() || enemiesNear())
+			bail();
 
 		/* TODO: maybe change the p of moving */
-		if (fate > 0.8) {
-			build(RobotType.SCOUT);
-			inform();
-		} else
-			bail();
+		build(RobotType.SCOUT);
+
 	}
 
 	protected void inform() throws GameActionException {

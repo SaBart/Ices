@@ -175,28 +175,32 @@ public abstract class Robot {
 	}
 
 	protected void bail() throws GameActionException {
-		// if (!rc.isCoreReady())
-		// return;
-		//
-		// Direction d = directions[rand.nextInt(8)];
-		//
-		// if (rc.canMove(d))
-		// rc.move(d);
-		// else {
-		// int base = Arrays.asList(directions).indexOf(d);
-		// for (int shift = 1; shift <= 4; shift++) {
-		// d = directions[(base + shift) % directions.length];
-		// if (rc.canMove(d)) {
-		// rc.move(d);
-		// break;
-		// }
-		// d = directions[(base - shift) % directions.length];
-		// if (rc.canMove(d)) {
-		// rc.move(d);
-		// break;
-		// }
-		//
-		// }
-		// }
+		if (!rc.isCoreReady())
+			return;
+
+		int closest = senseRadius;
+		Direction d = directions[rand.nextInt(8)];
+
+		for (RobotInfo ri : zombies)
+			if (rc.getLocation().distanceSquaredTo(ri.location) < closest)
+				d = ri.location.directionTo(rc.getLocation());
+
+		for (RobotInfo ri : enemies)
+			if (rc.getLocation().distanceSquaredTo(ri.location) < closest)
+				d = ri.location.directionTo(rc.getLocation());
+
+		Direction turnLeft = d;
+		Direction turnRight = d;
+		while (!rc.canMove(turnLeft) && !rc.canMove(turnRight)) {
+			turnLeft = turnLeft.rotateLeft();
+			turnRight = turnRight.rotateRight();
+		}
+
+		if (rc.canMove(turnLeft))
+			d = turnLeft;
+		else
+			d = turnRight;
+
+		rc.move(d);
 	}
 }

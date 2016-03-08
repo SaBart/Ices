@@ -1,5 +1,7 @@
 package ices;
 
+import java.util.*;
+
 import battlecode.common.*;
 
 public class Scout extends Robot {
@@ -13,19 +15,21 @@ public class Scout extends Robot {
 
 	protected Direction direction;
 	protected MapLocation destination;
+	protected ArrayList<Target> targets;
 	protected boolean suicideMode;
 	protected int infection;
 
 	public Scout(RobotController rc) {
 		super(rc);
 		timesMoved = 0;
-
 		sensedBase = false;
 		baseType = true; // true for player; false for zombie den
 		xCoord = 0;
 		yCoord = 0;
 		baseID = 0;
-		direction = directions[rand.nextInt(8)];
+		direction = rc.getLocation().directionTo(rc.getInitialArchonLocations(rc.getTeam().opponent())[rand
+				.nextInt(rc.getInitialArchonLocations(rc.getTeam().opponent()).length)]);
+		targets = new ArrayList<>();
 	}
 
 	@Override
@@ -40,8 +44,8 @@ public class Scout extends Robot {
 		if (infection > 9 && suicideMode)
 			rc.disintegrate();
 
-		if (destination != null && rc.isInfected())
-			suicideMode = true;
+		if (!targets.isEmpty() && rc.isInfected())
+			destination = targets.get(rand.nextInt(targets.size())).where;
 
 		processSignals();
 		if (!suicideMode) {
@@ -62,10 +66,14 @@ public class Scout extends Robot {
 			if (sig.getTeam() != rc.getTeam())
 				continue;
 			int[] data = sig.getMessage();
-			int x = data[0];
-			int y = data[1];
-			MapLocation archon = new MapLocation(x, y);
-			destination = archon;
+			int x = data[0] / 10000;
+			int y = data[0] % 10000;
+			int id = data[1];
+			MapLocation l = new MapLocation(x, y);
+
+			for (Target t : targets)
+				if (t.who == id)
+					t.where = l;
 		}
 	}
 
