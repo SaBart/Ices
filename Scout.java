@@ -6,57 +6,45 @@ import battlecode.common.*;
 
 public class Scout extends Robot {
 
-	protected int timesMoved;
-	protected boolean sensedBase;
-	protected boolean baseType;
-	protected int xCoord;
-	protected int yCoord;
-	protected int baseID;
-
 	protected Direction direction;
 	protected MapLocation destination;
 	protected ArrayList<Target> targets;
-	protected boolean suicideMode;
+	protected ArrayList<MapLocation> zombieDens;
 	protected int infection;
 
 	public Scout(RobotController rc) {
 		super(rc);
-		timesMoved = 0;
-		sensedBase = false;
-		baseType = true; // true for player; false for zombie den
-		xCoord = 0;
-		yCoord = 0;
-		baseID = 0;
 		direction = rc.getLocation().directionTo(rc.getInitialArchonLocations(rc.getTeam().opponent())[rand
 				.nextInt(rc.getInitialArchonLocations(rc.getTeam().opponent()).length)]);
+
+		if (rand.nextDouble() < 0.8)
+			direction = directions[rand.nextInt(directions.length)];
+
 		targets = new ArrayList<>();
+		zombieDens = new ArrayList<>();
+
 	}
 
 	@Override
 	protected void act() throws GameActionException {
-		// sendMissedMessages(); // In case we found something, but were not
-		// able
-		// to send message in previous turn
 
-		if (rc.isInfected())
-			infection++;
-
-		if (infection > 9 && suicideMode)
-			rc.disintegrate();
-
-		if (!targets.isEmpty() && rc.isInfected())
-			destination = targets.get(rand.nextInt(targets.size())).where;
-
-		processSignals();
-		if (!suicideMode) {
+		if (rc.getRoundNum() % 5 == 4)
+			processSignals();
+		if (targets.isEmpty() && zombieDens.isEmpty() && rc.getRoundNum() % 5 == 2) {
 			senseEnemies();
 			senseEnemyBase();
 			senseZombies();
-			explore();
-		} else
+			senseZombieDen();
+		}
+		if (!targets.isEmpty() && rc.isInfected()) {
+			destination = targets.get(rand.nextInt(targets.size())).where;
 			homeInOn();
-		// lureZombies();
-
+		}
+		if (!rc.isInfected() && !zombieDens.isEmpty()) {
+			destination = zombieDens.get(rand.nextInt(zombieDens.size()));
+			getInfected();
+		}
+		explore();
 	}
 
 	@Override
@@ -71,10 +59,16 @@ public class Scout extends Robot {
 			int id = data[1];
 			MapLocation l = new MapLocation(x, y);
 
-			for (Target t : targets)
-				if (t.who == id)
-					t.where = l;
+			if (id > 0) {
+				for (Target t : targets)
+					if (t.who == id) {
+						t.where = l;
+						return;
+					}
+				targets.add(new Target(id, l));
+			}
 		}
+		rc.setIndicatorString(0, Integer.toString(targets.size()));
 	}
 
 	protected void explore() throws GameActionException {
@@ -93,7 +87,6 @@ public class Scout extends Robot {
 			direction = turnRight;
 
 		rc.move(direction);
-		timesMoved++;
 
 		/*
 		 * sense what is around me once in a while, if its important, tell my
@@ -105,9 +98,16 @@ public class Scout extends Robot {
 		if (!rc.isCoreReady())
 			return;
 
-		if (rc.getLocation().distanceSquaredTo(destination) < 10) {
+		rc.setIndicatorString(0, "suicide run");
+
+		if (rc.getInfectedTurns() == 1)
+			rc.disintegrate();
+
+		if (rc.getLocation().distanceSquaredTo(destination) <= 8) {
 			senseEnemies();
 			senseEnemyBase();
+			if (rc.isInfected())
+				rc.disintegrate();
 		}
 
 		Direction l = rc.getLocation().directionTo(destination);
@@ -123,20 +123,39 @@ public class Scout extends Robot {
 			rc.move(r);
 	}
 
-	protected void sendMissedMessages() throws GameActionException {
-		if (sensedBase) {
-			// code x, y, ID and type into 2 ints
-			int ID = baseID;
-			if (baseType)
-				ID = baseID * -1;
-			// System.out.println("send x: " + xCoord + " y: " + yCoord);
-			rc.broadcastMessageSignal(10000 * xCoord + yCoord, ID, 100); // TODO
-																			// radius
-																			// change
-			sensedBase = false;
+	protected void getInfected() throws GameActionException {
+		if (!rc.isCoreReady())
+			return;
+
+		rc.setIndicatorString(0, "getting infected");
+
+		Direction l = rc.getLocation().directionTo(destination);
+		Direction r = rc.getLocation().directionTo(destination);
+		while (!rc.canMove(l) && !rc.canMove(r)) {
+			l = l.rotateLeft();
+			r = r.rotateRight();
 		}
-		return;
+
+		if (rc.canMove(l))
+			rc.move(l);
+		else if (rc.canMove(r))
+			rc.move(r);
 	}
+
+	// protected void sendMissedMessages() throws GameActionException {
+	// if (sensedBase) {
+	// // code x, y, ID and type into 2 ints
+	// int ID = baseID;
+	// if (baseType)
+	// ID = baseID * -1;
+	// // System.out.println("send x: " + xCoord + " y: " + yCoord);
+	// rc.broadcastMessageSignal(10000 * xCoord + yCoord, ID, 100); // TODO
+	// // radius
+	// // change
+	// sensedBase = false;
+	// }
+	// return;
+	// }
 
 	// protected void lureZombies() throws GameActionException {
 	// if (!rc.isCoreReady())
@@ -156,25 +175,27 @@ public class Scout extends Robot {
 	protected void senseEnemyBase() throws GameActionException {
 		if (!enemiesNear())
 			return;
-
-		// for (RobotInfo enemy : enemies)
-		// if (enemy.type == RobotType.ARCHON)
-		// if (knownBase(enemy.ID, enemy.location.x, enemy.location.y))
-		// continue;
-		// else {
-		// sensedBase = true;
-		// baseType = true;
-		// xCoord = enemy.location.x;
-		// yCoord = enemy.location.y;
-		// baseID = enemy.ID;
-		// sendMissedMessages();
-		// continue;
-		// }
-
+		rc.setIndicatorString(0, "scanning for bases");
 		for (RobotInfo enemy : enemies)
 			if (enemy.type == RobotType.ARCHON) {
-				rc.broadcastMessageSignal(enemy.location.x, enemy.location.y, 1000);
-				destination = enemy.location;
+				rc.broadcastMessageSignal(enemy.location.x * 10000 + enemy.location.y, enemy.ID, 1000);
+				for (Target t : targets)
+					if (t.who == enemy.ID) {
+						t.where = enemy.location;
+						return;
+					}
+				targets.add(new Target(enemy.ID, enemy.location));
+			}
+	}
+
+	protected void senseZombieDen() throws GameActionException {
+		if (!zombiesNear())
+			return;
+		rc.setIndicatorString(0, "scanning for dens");
+		for (RobotInfo zombie : zombies)
+			if (zombie.type == RobotType.ZOMBIEDEN) {
+				rc.broadcastMessageSignal(zombie.location.x * 10000 + zombie.location.y, -zombie.ID, 1000);
+				destination = zombie.location;
 			}
 	}
 
