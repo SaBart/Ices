@@ -1,54 +1,18 @@
 package ices;
 
-import java.util.*;
-
 import battlecode.common.*;
 
 public class Scout extends Robot {
 
-	protected Direction direction;
 	protected MapLocation destination;
+	protected Direction direction;
 
 	public Scout(RobotController rc) {
 		super(rc);
-		direction = rc.getLocation().directionTo(rc.getInitialArchonLocations(rc.getTeam().opponent())[rand
-				.nextInt(rc.getInitialArchonLocations(rc.getTeam().opponent()).length)]);
 	}
 
 	@Override
 	protected void act() throws GameActionException {
-
-		if (rc.getInfectedTurns() == 1)
-			rc.disintegrate();
-
-		if (destination == null && !targets.isEmpty() && rc.isInfected()) {
-			// closest enemy archon
-			destination = targets.get(0).where;
-			for (Target t : targets)
-				if (rc.getLocation().distanceSquaredTo(t.where) < rc.getLocation().distanceSquaredTo(destination))
-					destination = t.where;
-		}
-
-		if (destination == null && !rc.isInfected() && !zombieDens.isEmpty() && !targets.isEmpty()) {
-			// closest enemy archon
-			MapLocation archon = targets.get(0).where;
-			for (Target t : targets)
-				if (rc.getLocation().distanceSquaredTo(t.where) < rc.getLocation().distanceSquaredTo(archon))
-					archon = t.where;
-			// a den closest to the archon
-			destination = zombieDens.get(0);
-			for (MapLocation l : zombieDens)
-				if (archon.distanceSquaredTo(l) < archon.distanceSquaredTo(destination))
-					destination = l;
-		}
-		if (destination != null && rc.isInfected()) {
-			homeInOn();
-			return;
-		}
-		if (destination != null && !rc.isInfected()) {
-			getInfected();
-			return;
-		}
 		if (rc.getRoundNum() % 5 == 4)
 			processSignals();
 		if (rc.getRoundNum() % 5 == 3) {
@@ -57,113 +21,94 @@ public class Scout extends Robot {
 			senseZombies();
 			senseZombieDen();
 		}
-
+		pickTarget();
+		if (destination != null)
+			rc.setIndicatorString(0, "destination=[" + destination.x + "," + destination.y + "]");
+		suicideCheck();
+		navigate();
 		explore();
 	}
 
-	protected void explore() throws GameActionException {
-		if (!rc.isCoreReady())
+	protected void pickTarget() throws GameActionException {
+		if (!rc.isInfected())
 			return;
-		Direction turnLeft = direction;
-		Direction turnRight = direction;
-		while (!rc.canMove(turnLeft) && !rc.canMove(turnRight)) {
-			turnLeft = turnLeft.rotateLeft();
-			turnRight = turnRight.rotateRight();
+		// no targets, pick the closest initial archon position
+		if (targets.isEmpty()) {
+			destination = initArchons[rand.nextInt(initArchons.length)];
+			for (MapLocation archon : initArchons)
+				if (rc.getLocation().distanceSquaredTo(archon) < rc.getLocation().distanceSquaredTo(destination))
+					destination = archon;
+			return;
 		}
-
-		if (rc.canMove(turnLeft))
-			rc.move(turnLeft);
-		else
-			rc.move(turnRight);
-
-		/*
-		 * sense what is around me once in a while, if its important, tell my
-		 * friends
-		 */
+		// closest enemy archon
+		destination = targets.get(0).where;
+		for (Target t : targets)
+			if (rc.getLocation().distanceSquaredTo(t.where) < rc.getLocation().distanceSquaredTo(destination))
+				destination = t.where;
 	}
 
-	protected void homeInOn() throws GameActionException {
-		if (!rc.isCoreReady())
-			return;
+	// protected void explore() throws GameActionException {
+	// if (rc.isInfected() || destination != null)
+	// return;
+	// if (zombieDens.isEmpty()) {
+	// ;
+	// return;
+	// }
+	// destination = zombieDens.get(0);
+	// for (MapLocation l : zombieDens)
+	// if (rc.getLocation().distanceSquaredTo(l) <
+	// rc.getLocation().distanceSquaredTo(destination))
+	// destination = l;
+	// }
+
+	protected void suicideCheck() throws GameActionException {
 		if (!rc.isInfected()) {
 			destination = null;
 			return;
 		}
-
-		rc.setIndicatorString(0, "suicide run");
-
 		if (rc.getLocation().distanceSquaredTo(destination) <= 20) {
 			senseEnemies();
 			senseEnemyBase();
-			if (rc.isInfected())
-				rc.disintegrate();
+			rc.disintegrate();
 		}
-
-		Direction l = rc.getLocation().directionTo(destination);
-		Direction r = rc.getLocation().directionTo(destination);
-		while (!rc.canMove(l) && !rc.canMove(r)) {
-			l = l.rotateLeft();
-			r = r.rotateRight();
-		}
-
-		if (rc.canMove(l))
-			rc.move(l);
-		else if (rc.canMove(r))
-			rc.move(r);
 	}
 
-	protected void getInfected() throws GameActionException {
-		if (!rc.isCoreReady())
+	protected void explore() throws GameActionException {
+		if (!rc.isCoreReady() || destination != null)
 			return;
-		if (rc.isInfected()) {
+		if (direction == null)
+			direction = directions[rand.nextInt(directions.length)];
+
+		if (rc.canMove(direction))
+			rc.move(direction);
+		else if (rc.canMove(direction.rotateLeft()))
+			rc.move(direction.rotateLeft());
+		else if (rc.canMove(direction.rotateRight()))
+			rc.move(direction.rotateRight());
+		else
+			direction = rand.nextDouble() < 0.5 ? direction.rotateLeft() : direction.rotateRight();
+	}
+
+	protected void navigate() throws GameActionException {
+		if (!rc.isCoreReady() || destination == null)
+			return;
+
+		if (rc.getLocation().distanceSquaredTo(destination) == 0) {
 			destination = null;
 			return;
 		}
 
-		rc.setIndicatorString(0, "getting infected");
-
 		Direction l = rc.getLocation().directionTo(destination);
 		Direction r = rc.getLocation().directionTo(destination);
 		while (!rc.canMove(l) && !rc.canMove(r)) {
 			l = l.rotateLeft();
 			r = r.rotateRight();
 		}
-
 		if (rc.canMove(l))
 			rc.move(l);
 		else if (rc.canMove(r))
 			rc.move(r);
 	}
-
-	// protected void sendMissedMessages() throws GameActionException {
-	// if (sensedBase) {
-	// // code x, y, ID and type into 2 ints
-	// int ID = baseID;
-	// if (baseType)
-	// ID = baseID * -1;
-	// // System.out.println("send x: " + xCoord + " y: " + yCoord);
-	// rc.broadcastMessageSignal(10000 * xCoord + yCoord, ID, 100); // TODO
-	// // radius
-	// // change
-	// sensedBase = false;
-	// }
-	// return;
-	// }
-
-	// protected void lureZombies() throws GameActionException {
-	// if (!rc.isCoreReady())
-	// return;
-	// if (!zombiesNear())
-	// return;
-	// if (Archons.isEmpty())
-	// return;
-	// Direction d = rc.getLocation().directionTo((MapLocation)
-	// Archons.values().toArray()[0]);
-	// if (rc.canMove(d))
-	// rc.move(d);
-	//
-	// return;
-	// }
 
 	protected void senseEnemyBase() throws GameActionException {
 		if (!enemiesNear())
@@ -194,34 +139,4 @@ public class Scout extends Robot {
 				zombieDens.add(zombie.location);
 			}
 	}
-
-	// @Override
-	// protected boolean senseZombies() throws GameActionException {
-	// if (!rc.isCoreReady())
-	// return false;
-	// zombies = rc.senseNearbyRobots(senseRadius, Team.ZOMBIE);
-	//
-	// if (zombies.length == 0)
-	// return false;
-	//
-	// boolean nonBaseZombies = false;
-	//
-	// for (RobotInfo zombie : zombies) {
-	// if (zombie.type == RobotType.ZOMBIEDEN)
-	// if (knownBase(zombie.ID, zombie.location.x, zombie.location.y))
-	// continue;
-	// else {
-	// sensedBase = true;
-	// baseType = false;
-	// xCoord = zombie.location.x;
-	// yCoord = zombie.location.y;
-	// baseID = zombie.ID;
-	// sendMissedMessages();
-	// continue;
-	// }
-	// nonBaseZombies = true;
-	// }
-	//
-	// return nonBaseZombies;
-	// }
 }
