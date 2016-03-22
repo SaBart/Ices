@@ -33,16 +33,14 @@ public class Archon extends Robot {
 		}
 		if (rc.getRoundNum() % 10 == 9) {
 			for (Target t : targets)
-				rc.broadcastMessageSignal(t.where.x * 10000 + t.where.y, t.who, 1000);
+				rc.broadcastMessageSignal(t.where.x * 1000 + t.where.y, t.who, 1000);
 			for (MapLocation l : zombieDens)
-				rc.broadcastMessageSignal(l.x * 10000 + l.y, -1, 1000);
+				rc.broadcastMessageSignal(l.x * 1000 + l.y, -1, 1000);
 		}
 		processSignals();
 		senseZombies();
 		senseEnemies();
-
 		build(RobotType.SCOUT);
-
 	}
 
 	protected void inform() throws GameActionException {

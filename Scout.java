@@ -78,7 +78,6 @@ public class Scout extends Robot {
 			return;
 		if (direction == null)
 			direction = directions[rand.nextInt(directions.length)];
-
 		if (rc.canMove(direction))
 			rc.move(direction);
 		else if (rc.canMove(direction.rotateLeft()))
@@ -93,21 +92,22 @@ public class Scout extends Robot {
 		if (!rc.isCoreReady() || destination == null)
 			return;
 
-		if (rc.getLocation().distanceSquaredTo(destination) == 0) {
+		MapLocation l = rc.getLocation();
+
+		if (l.distanceSquaredTo(destination) == 0) {
 			destination = null;
 			return;
 		}
+		Direction d = l.directionTo(destination);
 
-		Direction l = rc.getLocation().directionTo(destination);
-		Direction r = rc.getLocation().directionTo(destination);
-		while (!rc.canMove(l) && !rc.canMove(r)) {
-			l = l.rotateLeft();
-			r = r.rotateRight();
-		}
-		if (rc.canMove(l))
-			rc.move(l);
-		else if (rc.canMove(r))
-			rc.move(r);
+		if (rc.canMove(d) && rc.senseRubble(l.add(d)) < 100)
+			rc.move(d);
+		else if (rc.canMove(d.rotateLeft()) && rc.senseRubble(l.add(d.rotateLeft())) < 100)
+			rc.move(d.rotateLeft());
+		else if (rc.canMove(d.rotateRight()) && rc.senseRubble(l.add(d.rotateRight())) < 100)
+			rc.move(d.rotateRight());
+		else if (rc.senseRubble(l.add(d.opposite())) > 100)
+			rc.clearRubble(d.opposite());
 	}
 
 	protected void senseEnemyBase() throws GameActionException {

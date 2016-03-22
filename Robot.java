@@ -106,7 +106,6 @@ public abstract class Robot {
 	}
 
 	/* move from my location to specified location */
-	
 
 	protected void bail() throws GameActionException {
 		if (!rc.isCoreReady()) {
@@ -117,27 +116,29 @@ public abstract class Robot {
 
 		int closest = senseRadius;
 		Direction d = directions[rand.nextInt(8)];
+		MapLocation l = rc.getLocation();
 
-		for (RobotInfo ri : zombies)
-			if (rc.getLocation().distanceSquaredTo(ri.location) < closest)
-				d = ri.location.directionTo(rc.getLocation());
-
-		for (RobotInfo ri : enemies)
-			if (rc.getLocation().distanceSquaredTo(ri.location) < closest)
-				d = ri.location.directionTo(rc.getLocation());
-
-		Direction turnLeft = d;
-		Direction turnRight = d;
-		while (!rc.canMove(turnLeft) && !rc.canMove(turnRight)) {
-			turnLeft = turnLeft.rotateLeft();
-			turnRight = turnRight.rotateRight();
+		for (RobotInfo ri : zombies) {
+			int current = l.distanceSquaredTo(ri.location);
+			if (current < closest) {
+				d = ri.location.directionTo(l);
+				closest = current;
+			}
 		}
-
-		if (rc.canMove(turnLeft))
-			d = turnLeft;
-		else
-			d = turnRight;
-
-		rc.move(d);
+		for (RobotInfo ri : enemies) {
+			int current = l.distanceSquaredTo(ri.location);
+			if (current < closest) {
+				d = ri.location.directionTo(l);
+				closest = current;
+			}
+		}
+		if (rc.canMove(d))
+			rc.move(d);
+		else if (rc.canMove(d.rotateLeft()))
+			rc.move(d.rotateLeft());
+		else if (rc.canMove(d.rotateRight()))
+			rc.move(d.rotateRight());
+		else if (rc.onTheMap(l.add(d)))
+			rc.clearRubble(d);
 	}
 }
