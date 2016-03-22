@@ -20,6 +20,7 @@ public abstract class Robot {
 	protected ArrayList<Target> targets;
 	protected ArrayList<MapLocation> zombieDens;
 	protected MapLocation[] initArchons;
+	protected MapLocation[] ourArchons;
 
 	// TODO: list of known bases - archons + zombie dens
 	// some structure with position, type and ID of base
@@ -36,6 +37,7 @@ public abstract class Robot {
 		targets = new ArrayList<>();
 		zombieDens = new ArrayList<>();
 		initArchons = rc.getInitialArchonLocations(rc.getTeam().opponent());
+		ourArchons = rc.getInitialArchonLocations(rc.getTeam());
 	}
 
 	public void run() {

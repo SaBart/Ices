@@ -28,7 +28,7 @@ public class Scout extends Robot {
 	}
 
 	protected void pickTarget() throws GameActionException {
-		if (!rc.isInfected()) return;
+		if (!rc.isInfected() || destination != null) return;
 		// no targets, pick the closest initial archon position
 		if (targets.isEmpty()) {
 			destination = initArchons[rand.nextInt(initArchons.length)];
@@ -94,7 +94,6 @@ public class Scout extends Robot {
 		if (rc.canMove(d) && rc.senseRubble(l.add(d)) < 100) rc.move(d);
 		else if (rc.canMove(d.rotateLeft()) && rc.senseRubble(l.add(d.rotateLeft())) < 100) rc.move(d.rotateLeft());
 		else if (rc.canMove(d.rotateRight()) && rc.senseRubble(l.add(d.rotateRight())) < 100) rc.move(d.rotateRight());
-		else if (rc.senseRubble(l.add(d.opposite())) > 100) rc.clearRubble(d.opposite());
 	}
 
 	protected void senseEnemyBase() throws GameActionException {
