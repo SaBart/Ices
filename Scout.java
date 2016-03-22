@@ -13,8 +13,7 @@ public class Scout extends Robot {
 
 	@Override
 	protected void act() throws GameActionException {
-		if (rc.getRoundNum() % 5 == 4)
-			processSignals();
+		if (rc.getRoundNum() % 5 == 4) processSignals();
 		if (rc.getRoundNum() % 5 == 3) {
 			senseEnemies();
 			senseEnemyBase();
@@ -22,16 +21,14 @@ public class Scout extends Robot {
 			senseZombieDen();
 		}
 		pickTarget();
-		if (destination != null)
-			rc.setIndicatorString(0, "destination=[" + destination.x + "," + destination.y + "]");
+		if (destination != null) rc.setIndicatorString(0, "destination=[" + destination.x + "," + destination.y + "]");
 		suicideCheck();
 		navigate();
 		explore();
 	}
 
 	protected void pickTarget() throws GameActionException {
-		if (!rc.isInfected())
-			return;
+		if (!rc.isInfected()) return;
 		// no targets, pick the closest initial archon position
 		if (targets.isEmpty()) {
 			destination = initArchons[rand.nextInt(initArchons.length)];
@@ -63,6 +60,7 @@ public class Scout extends Robot {
 
 	protected void suicideCheck() throws GameActionException {
 		if (!rc.isInfected()) {
+			if (destination != null) direction = destination.directionTo(rc.getLocation());
 			destination = null;
 			return;
 		}
@@ -74,23 +72,16 @@ public class Scout extends Robot {
 	}
 
 	protected void explore() throws GameActionException {
-		if (!rc.isCoreReady() || destination != null)
-			return;
-		if (direction == null)
-			direction = directions[rand.nextInt(directions.length)];
-		if (rc.canMove(direction))
-			rc.move(direction);
-		else if (rc.canMove(direction.rotateLeft()))
-			rc.move(direction.rotateLeft());
-		else if (rc.canMove(direction.rotateRight()))
-			rc.move(direction.rotateRight());
-		else
-			direction = rand.nextDouble() < 0.5 ? direction.rotateLeft() : direction.rotateRight();
+		if (!rc.isCoreReady() || destination != null) return;
+		if (direction == null) direction = directions[rand.nextInt(directions.length)];
+		if (rc.canMove(direction)) rc.move(direction);
+		else if (rc.canMove(direction.rotateLeft())) rc.move(direction.rotateLeft());
+		else if (rc.canMove(direction.rotateRight())) rc.move(direction.rotateRight());
+		else direction = rand.nextDouble() < 0.5 ? direction.rotateLeft() : direction.rotateRight();
 	}
 
 	protected void navigate() throws GameActionException {
-		if (!rc.isCoreReady() || destination == null)
-			return;
+		if (!rc.isCoreReady() || destination == null) return;
 
 		MapLocation l = rc.getLocation();
 
@@ -100,19 +91,14 @@ public class Scout extends Robot {
 		}
 		Direction d = l.directionTo(destination);
 
-		if (rc.canMove(d) && rc.senseRubble(l.add(d)) < 100)
-			rc.move(d);
-		else if (rc.canMove(d.rotateLeft()) && rc.senseRubble(l.add(d.rotateLeft())) < 100)
-			rc.move(d.rotateLeft());
-		else if (rc.canMove(d.rotateRight()) && rc.senseRubble(l.add(d.rotateRight())) < 100)
-			rc.move(d.rotateRight());
-		else if (rc.senseRubble(l.add(d.opposite())) > 100)
-			rc.clearRubble(d.opposite());
+		if (rc.canMove(d) && rc.senseRubble(l.add(d)) < 100) rc.move(d);
+		else if (rc.canMove(d.rotateLeft()) && rc.senseRubble(l.add(d.rotateLeft())) < 100) rc.move(d.rotateLeft());
+		else if (rc.canMove(d.rotateRight()) && rc.senseRubble(l.add(d.rotateRight())) < 100) rc.move(d.rotateRight());
+		else if (rc.senseRubble(l.add(d.opposite())) > 100) rc.clearRubble(d.opposite());
 	}
 
 	protected void senseEnemyBase() throws GameActionException {
-		if (!enemiesNear())
-			return;
+		if (!enemiesNear()) return;
 		rc.setIndicatorString(0, "scanning for bases");
 		for (RobotInfo enemy : enemies)
 			if (enemy.type == RobotType.ARCHON) {
@@ -127,15 +113,13 @@ public class Scout extends Robot {
 	}
 
 	protected void senseZombieDen() throws GameActionException {
-		if (!zombiesNear())
-			return;
+		if (!zombiesNear()) return;
 		rc.setIndicatorString(0, "scanning for dens");
 		for (RobotInfo zombie : zombies)
 			if (zombie.type == RobotType.ZOMBIEDEN) {
 				rc.broadcastMessageSignal(zombie.location.x * 10000 + zombie.location.y, -zombie.ID, 1000);
 				for (MapLocation l : zombieDens)
-					if (l.x == zombie.location.x && l.y == zombie.location.y)
-						return;
+					if (l.x == zombie.location.x && l.y == zombie.location.y) return;
 				zombieDens.add(zombie.location);
 			}
 	}
