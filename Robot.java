@@ -55,8 +55,7 @@ public abstract class Robot {
 	protected void processSignals() throws GameActionException {
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
-			if (sig.getTeam() != rc.getTeam())
-				continue;
+			if (sig.getTeam() != rc.getTeam()) continue;
 			int[] data = sig.getMessage();
 			int x = data[0] / 10000;
 			int y = data[0] % 10000;
@@ -72,8 +71,7 @@ public abstract class Robot {
 				targets.add(new Target(id, l));
 			} else {
 				for (MapLocation z : zombieDens)
-					if (z.x == l.x && z.y == l.y)
-						return;
+					if (z.x == l.x && z.y == l.y) return;
 				zombieDens.add(l);
 			}
 		}
@@ -125,6 +123,7 @@ public abstract class Robot {
 				closest = current;
 			}
 		}
+
 		for (RobotInfo ri : enemies) {
 			int current = l.distanceSquaredTo(ri.location);
 			if (current < closest) {
@@ -132,13 +131,16 @@ public abstract class Robot {
 				closest = current;
 			}
 		}
-		if (rc.canMove(d))
-			rc.move(d);
-		else if (rc.canMove(d.rotateLeft()))
-			rc.move(d.rotateLeft());
-		else if (rc.canMove(d.rotateRight()))
-			rc.move(d.rotateRight());
-		else if (rc.onTheMap(l.add(d)))
-			rc.clearRubble(d);
+		Direction turnLeft = d;
+		Direction turnRight = d;
+		while (!rc.canMove(turnLeft) && !rc.canMove(turnRight)) {
+			turnLeft = turnLeft.rotateLeft();
+			turnRight = turnRight.rotateRight();
+			if (turnLeft == turnRight) break;
+		}
+
+		if (turnLeft == turnRight && turnLeft != d && turnRight != d) rc.clearRubble(d);
+		else if (rc.canMove(turnLeft)) rc.move(turnLeft);
+		else if (rc.canMove(turnRight)) rc.move(turnRight);
 	}
 }
